@@ -123,14 +123,15 @@ class Hand:
         self.bank = 10
         self.called = []
         self.best = []
-    
+
     def ante(self):
         """ remove ante and add to pot """
         global pot
         self.bank -= 1
         pot += 1
-        
+
     def bet(self, bet: int):
+        """ bet a specific amount """
         global pot
         self.bank -= bet
         pot += bet
