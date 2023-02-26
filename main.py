@@ -5,19 +5,19 @@ from collections import defaultdict
 import random
 
 deck = [
-    "A♤", "A♡", "A♢", "A♧", 
-    "K♤", "K♡", "K♢", "K♧", 
-    "Q♤", "Q♡", "Q♢", "Q♧", 
-    "J♤", "J♡", "J♢", "J♧", 
-    "T♤", "T♡", "T♢", "T♧", 
-    "9♤", "9♡", "9♢", "9♧", 
-    "8♤", "8♡", "8♢", "8♧", 
-    "7♤", "7♡", "7♢", "7♧", 
-    "6♤", "6♡", "6♢", "6♧", 
-    "5♤", "5♡", "5♢", "5♧", 
-    "4♤", "4♡", "4♢", "4♧", 
-    "3♤", "3♡", "3♢", "3♧", 
-    "2♤", "2♡", "2♢", "2♧"
+    'A♤', 'A♡', 'A♢', 'A♧', 
+    'K♤', 'K♡', 'K♢', 'K♧', 
+    'Q♤', 'Q♡', 'Q♢', 'Q♧', 
+    'J♤', 'J♡', 'J♢', 'J♧', 
+    'T♤', 'T♡', 'T♢', 'T♧', 
+    '9♤', '9♡', '9♢', '9♧', 
+    '8♤', '8♡', '8♢', '8♧', 
+    '7♤', '7♡', '7♢', '7♧', 
+    '6♤', '6♡', '6♢', '6♧', 
+    '5♤', '5♡', '5♢', '5♧', 
+    '4♤', '4♡', '4♢', '4♧', 
+    '3♤', '3♡', '3♢', '3♧', 
+    '2♤', '2♡', '2♢', '2♧'
 ]
 
 random.shuffle(deck)
@@ -25,7 +25,7 @@ random.shuffle(deck)
 random.shuffle(deck)
 
 card_ranks = {
-    "2":2, "3":3, "4":4, "5":5, "6":6, "7":7, "8":8, "9":9, "T":10,"J":11, "Q":12, "K":13, "A":14
+    '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, 'T':10,'J':11, 'Q':12, 'K':13, 'A':14
 }
 
 
@@ -72,8 +72,8 @@ def check_straight(hand):
     value_range = max(rank_values) - min(rank_values)
     if len(set(value_counts.values())) == 1 and (value_range==4):
         return True
-    #check straight with low Ace
-    if set(values) == set(["A", "2", "3", "4", "5"]):
+    # check straight with low Ace
+    if set(values) == set(['A', '2', '3', '4', '5']):
         return True
     return False
 
@@ -109,31 +109,38 @@ def check_one_pair(hand):
 
 def clear() -> None:
     """ clears consle """
-    system('clear')
+    system('cls')
 
-
-pot = 0
-class Hand:
-    """ class for player hands, includes name, cards, bank, and cards score """
+pot = None
+class Player:
+    """ class for player hands, includes name, cards, chips, and cards score """
 
     def __init__(self, name: str):
         self.name = name
         self.hand = []
         self.score = 0
-        self.bank = 10
+        self.chips = 10
+        self.betting = 0
         self.called = []
         self.best = []
+
+    def reset(self):
+        self.hand.clear()
+        self.score = 0
+        self.called.clear()
+        self.best.clear()
 
     def ante(self):
         """ remove ante and add to pot """
         global pot
-        self.bank -= 1
+        self.chips -= 1
         pot += 1
 
     def bet(self, bet: int):
         """ bet a specific amount """
         global pot
-        self.bank -= bet
+        self.chips -= bet
+        self.betting = bet
         pot += bet
 
     def deal(self, *cards):
@@ -141,16 +148,16 @@ class Hand:
         for card in cards:
             self.hand.append(card)
 
-    def call(self, community_cards: list[str]) -> int:
+    def call(self, community_cards: list):
         """ pick the five used cards and get the hand rank """
         global card_ranks
         all_cards = self.hand + community_cards
         for index, card in enumerate(all_cards): 
-            print(f"{index+1}: {card}")
+            print(f'{index+1}: {card}')
 
         for i in range(1, 6):
             while True:
-                index = int(input(f"Card #{i}: "))-1
+                index = int(input(f'Card #{i}: '))-1
                 if all_cards[index] not in self.called:
                     break
                 print('Already using that card')
@@ -158,7 +165,7 @@ class Hand:
 
         self.best = list(sorted({card_ranks[n[0]] for n in self.called}))[::-1]
 
-        checks = [
+        checks = [                  # scores key
             check_one_pair,         # 2
             check_two_pair,         # 3
             check_three_of_a_kind,  # 4
@@ -171,20 +178,49 @@ class Hand:
 
         for check in checks[::-1]:
             if check(self.called):
-                return checks.index(check)+2
-        return 1
+                self.score = checks.index(check)+2
+        self.score = 1
 
-player1 = Hand("")
-player2 = Hand("")
+
+player1 = Player(input('Player 1: '))
+player2 = Player(input('Player 2: '))
 
 player1.deal(deck.pop(), deck.pop())
 
 community = [deck.pop() for _ in range(5)]
 
-score = player1.call(community)
+player1.call(community)
 
-print(score, player1.called, player1.best)
+print(player1.score, player1.called, player1.best)
 
-# sleep(1)
-# while player1.bank > 0 and player2.bank > 0:
-#     pot = 0
+sleep(1)
+
+player1.reset()
+community.clear()
+
+while player1.chips > 0 and player2.chips > 0:
+    clear()
+    pot = 0
+
+    player1.ante()
+    player2.ante()
+
+    # first rond betting (only face down cards)
+    while True:
+        print(player1.name, 'only!')
+        sleep(2)
+        print('Cards:', *player1.hand)
+        print('Chips:', player1.chips)
+        print('')
+        print(player2.name, 'chips:', player2.chips)
+        print(player2.name, 'bet:', player2.bet)
+        print('')
+        print(player2.betting - player1.betting, 'to call')
+        try: 
+            player1.betting = int(input('Bet: '))
+        except ValueError: 
+            player1.betting = 'check'
+
+        if player1.betting - player2.betting == 0 and player2.betting != 0: 
+            break
+            
