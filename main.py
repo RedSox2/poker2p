@@ -1,6 +1,6 @@
 """ imports for console control and card managment """
 from time import sleep
-from os import system
+from os import system, name
 from collections import defaultdict
 import random
 
@@ -109,7 +109,10 @@ def check_one_pair(hand):
 
 def clear() -> None:
     """ clears consle """
-    system('cls')
+    system('cls' if name == 'nt' else 'clear')
+def wait():
+    """ wait for enter """
+    input('Press ENTER to continue . . .')
 
 pot = None
 class Player:
@@ -121,12 +124,15 @@ class Player:
         self.score = 0
         self.chips = 10
         self.betting = 0
-        self.called = []
+        self.last = 0
+        self.called = ['fold']
         self.best = []
+        self.folded = False
 
     def reset(self):
         self.hand.clear()
         self.score = 0
+        self.betting = 0
         self.called.clear()
         self.best.clear()
 
@@ -139,8 +145,12 @@ class Player:
     def bet(self, bet: int):
         """ bet a specific amount """
         global pot
+        if bet < 0: 
+            bet = 0
+        if bet > self.chips: 
+            bet = self.chips
         self.chips -= bet
-        self.betting = bet
+        self.betting += bet
         pot += bet
 
     def deal(self, *cards):
@@ -148,79 +158,365 @@ class Player:
         for card in cards:
             self.hand.append(card)
 
+    def fold(self):
+        """ fold the hand """
+        self.folded = True
+        self.score = 0
+
     def call(self, community_cards: list):
         """ pick the five used cards and get the hand rank """
         global card_ranks
+        self.called.clear()
         all_cards = self.hand + community_cards
         for index, card in enumerate(all_cards): 
             print(f'{index+1}: {card}')
 
         for i in range(1, 6):
             while True:
-                index = int(input(f'Card #{i}: '))-1
-                if all_cards[index] not in self.called:
-                    break
-                print('Already using that card')
+                try:
+                    index = int(input(f'Card #{i}: '))-1
+                    if all_cards[index] not in self.called:
+                        break
+                    print('Already using that card')
+                except ValueError:
+                    print('Not a card #')
             self.called.append(all_cards[index])
 
         self.best = list(sorted({card_ranks[n[0]] for n in self.called}))[::-1]
 
-        checks = [                  # scores key
-            check_one_pair,         # 2
-            check_two_pair,         # 3
-            check_three_of_a_kind,  # 4
-            check_straight,         # 5
-            check_flush,            # 6
-            check_full_house,       # 7
-            check_four_of_a_kind,   # 8
-            check_straight_flush    # 9
+        checks = [                  
+            check_one_pair,         
+            check_two_pair,         
+            check_three_of_a_kind,  
+            check_straight,         
+            check_flush,            
+            check_full_house,       
+            check_four_of_a_kind,   
+            check_straight_flush    
         ]
 
         for check in checks[::-1]:
             if check(self.called):
                 self.score = checks.index(check)+2
-        self.score = 1
+                break
+        else:
+            self.score = 1
+
+        score_key = {
+            1: 'a high card',
+            2: 'one pair', 
+            3: 'two pair', 
+            4: 'three of a kind', 
+            5: 'a straight', 
+            6: 'a flush', 
+            7: 'a full house', 
+            8: 'four of a kind', 
+            9: 'a straight flush'
+        } 
+        
+        print('You have', score_key[self.score])
 
 
 player1 = Player(input('Player 1: '))
 player2 = Player(input('Player 2: '))
 
-player1.deal(deck.pop(), deck.pop())
-
-community = [deck.pop() for _ in range(5)]
-
-player1.call(community)
-
-print(player1.score, player1.called, player1.best)
-
 sleep(1)
 
-player1.reset()
-community.clear()
+community = []
 
 while player1.chips > 0 and player2.chips > 0:
+    player1.reset()
+    player2.reset()
+    
     clear()
     pot = 0
 
     player1.ante()
     player2.ante()
 
-    # first rond betting (only face down cards)
-    while True:
+    player1.deal(deck.pop())
+    player2.deal(deck.pop())
+
+    player1.deal(deck.pop())
+    player2.deal(deck.pop())
+
+    # pre-flop betting
+    while not player1.folded and not player2.folded:
+        clear()
         print(player1.name, 'only!')
-        sleep(2)
+        wait()
+
         print('Cards:', *player1.hand)
-        print('Chips:', player1.chips)
-        print('')
+        print('Chips:', player1.chips, '\n')
+
+        print('Pot:', pot, '\n')
+
         print(player2.name, 'chips:', player2.chips)
-        print(player2.name, 'bet:', player2.bet)
-        print('')
+        print(player2.name, 'bet:', player2.betting, '\n')
+
         print(player2.betting - player1.betting, 'to call')
         try: 
-            player1.betting = int(input('Bet: '))
+            bet_in = input('Bet: ')
+            player1.bet(int(bet_in))
         except ValueError: 
-            player1.betting = 'check'
+            if bet_in == 'f':
+                player1.fold()
+                break
 
-        if player1.betting - player2.betting == 0 and player2.betting != 0: 
+        if player1.betting == player2.betting and player2.betting != 0: 
             break
-            
+
+        clear()
+        print(player2.name, 'only!')
+        wait()
+
+        print('Cards:', *player2.hand)
+        print('Chips:', player2.chips, '\n')
+
+        print('Pot:', pot, '\n')
+
+        print(player1.name, 'chips:', player1.chips)
+        print(player2.name, 'bet:', player2.betting, '\n')
+
+        print(player1.betting - player2.betting, 'to call')
+        try: 
+            bet_in = input('Bet: ')
+            player2.bet(int(bet_in))
+        except ValueError:
+            if bet_in == 'f':
+                player2.fold()
+                break
+        
+        if player1.betting == player2.betting:
+            break
+    sleep(2)
+    clear()
+
+    # deal the flop
+    print('Heads up!!!')
+    print('The flop:')
+    
+    deck.pop()
+    community += [deck.pop() for _ in range(3)]
+    print(*community)
+
+    sleep(3)
+
+    player2.last = player2.betting
+        
+    # flop betting
+    while not player1.folded and not player2.folded:
+        clear()
+        print(player1.name, 'only!')
+        wait()
+
+        print('Cards:', *player1.hand)
+        print('Chips:', player1.chips, '\n')
+
+        print('Pot:', pot)
+        print('Community:', *community, '\n')
+
+        print(player2.name, 'chips:', player2.chips)
+        print(player2.name, 'bet:', player2.betting, '\n')
+
+        print(player2.betting - player1.betting, 'to call')
+        try: 
+            bet_in = input('Bet: ')
+            player1.bet(int(bet_in))
+        except ValueError: 
+            if bet_in == 'f':
+                player1.fold()
+                break
+
+        if player1.betting == player2.betting and player2.betting != player2.last: 
+            break
+        
+        clear()
+        print(player2.name, 'only!')
+        wait()
+        
+        print('Cards:', *player2.hand)
+        print('Chips:', player2.chips, '\n')
+
+        print('Pot:', pot)
+        print('Community:', *community, '\n')
+
+        print(player1.name, 'chips:', player1.chips)
+        print(player2.name, 'bet:', player2.betting, '\n')
+
+        print(player1.betting - player2.betting, 'to call')
+        try: 
+            bet_in = input('Bet: ')
+            player2.bet(int(bet_in))
+        except ValueError:
+            if bet_in == 'f':
+                player2.fold()
+                break
+        
+        if player1.betting == player2.betting:
+            break
+    sleep(2)
+    clear()
+
+    # deal the turn 
+    print('Heads up!!!')
+    print('The turn:')
+    
+    deck.pop()
+    community += [deck.pop()]
+    print(*community)
+
+    sleep(3)
+
+    player2.last = player2.betting
+        
+    # turn betting
+    while not player1.folded and not player2.folded:
+        clear()
+        print(player1.name, 'only!')
+        wait()
+
+        print('Cards:', *player1.hand)
+        print('Chips:', player1.chips, '\n')
+
+        print('Pot:', pot)
+        print('Community:', *community, '\n')
+
+        print(player2.name, 'chips:', player2.chips)
+        print(player2.name, 'bet:', player2.betting, '\n')
+
+        print(player2.betting - player1.betting, 'to call')
+        try: 
+            bet_in = input('Bet: ')
+            player1.bet(int(bet_in))
+        except ValueError: 
+            if bet_in == 'f':
+                player1.fold()
+                break
+
+        if player1.betting == player2.betting and player2.betting != player2.last: 
+            break
+        
+        clear()
+        print(player2.name, 'only!')
+        wait()
+
+        print('Cards:', *player2.hand)
+        print('Chips:', player2.chips, '\n')
+
+        print('Pot:', pot)
+        print('Community:', *community, '\n')
+
+        print(player1.name, 'chips:', player1.chips)
+        print(player2.name, 'bet:', player2.betting, '\n')
+
+        print(player1.betting - player2.betting, 'to call')
+        try: 
+            bet_in = input('Bet: ')
+            player2.bet(int(bet_in))
+        except ValueError:
+            if bet_in == 'f':
+                player2.fold()
+                break
+        
+        if player1.betting == player2.betting:
+            break
+    sleep(2)
+    clear()
+
+    # deal the river 
+    print('Heads up!!!')
+    print('The river:')
+    
+    deck.pop()
+    community += [deck.pop()]
+    print(*community)
+
+    sleep(3)
+
+    player2.last = player2.betting
+
+        
+    # river betting
+    while not player1.folded and not player2.folded:
+        clear()
+        print(player1.name, 'only!')
+        wait()
+
+        print('Cards:', *player1.hand)
+        print('Chips:', player1.chips, '\n')
+
+        print('Pot:', pot)
+        print('Community:', *community, '\n')
+
+        print(player2.name, 'chips:', player2.chips)
+        print(player2.name, 'bet:', player2.betting, '\n')
+
+        print(player2.betting - player1.betting, 'to call')
+        try: 
+            bet_in = input('Bet: ')
+            player1.bet(int(bet_in))
+        except ValueError: 
+            if bet_in == 'f':
+                player1.fold()
+                break
+
+        if player1.betting == player2.betting and player2.betting != player2.betting: 
+            break
+        
+        clear()
+        print(player2.name, 'only!')
+        wait()
+
+        print('Cards:', *player2.hand)
+        print('Chips:', player2.chips, '\n')
+
+        print('Pot:', pot)
+        print('Community:', *community, '\n')
+
+        print(player1.name, 'chips:', player1.chips)
+        print(player2.name, 'bet:', player2.betting, '\n')
+
+        print(player1.betting - player2.betting, 'to call')
+        try: 
+            bet_in = input('Bet: ')
+            player2.bet(int(bet_in))
+        except ValueError:
+            if bet_in == 'f':
+                player2.fold()
+                break
+        
+        if player1.betting == player2.betting:
+            break
+    sleep(2)
+    clear()
+
+    # compute the hands of each
+    if not player1.folded and not player2.folded:
+        print(player1.name, 'only!')
+        wait()
+        player1.call(community)
+        sleep(2)
+        clear()
+
+        print(player2.name, 'only!')
+        wait()
+        player2.call(community)
+        sleep(2)
+        clear()
+
+    if player1.score > player2.score or player2.folded:
+        print(player1.name, 'wins!')
+        print('They had:', *player1.called)
+        print(player2.name, 'had', *player2.called)
+    elif player2.score > player1.score or player1.folded:
+        print(player2.name, 'wins!')
+        print('The had:', *player2.called)
+        print(player1.name, 'had', *player2.called)
+    else:
+        print('Tie! We\'ll get to it')
+
+    print(player1.score, player2.score)
+
+    print('Success!!!')
+    break
