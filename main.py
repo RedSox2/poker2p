@@ -142,18 +142,18 @@ class Player:
         self.chips -= 1
         pot += 1
 
-    def bet(self, bet: int):
+    def bet(self, bet: int, diff: int):
         """ bet a specific amount """
         global pot
-        if bet < 0: 
-            bet = 0
+        if bet < diff: 
+            bet = diff
         if bet > self.chips: 
             bet = self.chips
         self.chips -= bet
         self.betting += bet
         pot += bet
 
-    def deal(self, *cards):
+    def deal(self, cards):
         """ deals a card to the hand """
         for card in cards:
             self.hand.append(card)
@@ -182,7 +182,7 @@ class Player:
                     print('Not a card #')
             self.called.append(all_cards[index])
 
-        self.best = list(sorted({card_ranks[n[0]] for n in self.called}))[::-1]
+        self.best = list(sorted({card_ranks[n[0]] for n in self.called}, reverse=True))
 
         checks = [                  
             check_one_pair,         
@@ -227,6 +227,8 @@ community = []
 while player1.chips > 0 and player2.chips > 0:
     player1.reset()
     player2.reset()
+
+    community.clear()
     
     clear()
     pot = 0
@@ -241,27 +243,31 @@ while player1.chips > 0 and player2.chips > 0:
     player2.deal(deck.pop())
 
     # pre-flop betting
-    while not player1.folded and not player2.folded:
+    while not player1.folded and not player2.folded and player1.chips > 0 and player2.chips > 0:
         clear()
         print(player1.name, 'only!')
         wait()
 
         print('Cards:', *player1.hand)
-        print('Chips:', player1.chips, '\n')
+        print('Chips:', player1.chips)
+        print('Bet:', player1.betting, '\n')
 
         print('Pot:', pot, '\n')
 
         print(player2.name, 'chips:', player2.chips)
         print(player2.name, 'bet:', player2.betting, '\n')
 
-        print(player2.betting - player1.betting, 'to call')
+        to_call = player2.betting - player1.betting
+        print(to_call, 'to call')
         try: 
             bet_in = input('Bet: ')
-            player1.bet(int(bet_in))
+            player1.bet(int(bet_in), to_call)
         except ValueError: 
             if bet_in == 'f':
                 player1.fold()
                 break
+            if to_call > 0:
+                player1.bet(to_call, 0)
 
         if player1.betting == player2.betting and player2.betting != 0: 
             break
@@ -271,22 +277,26 @@ while player1.chips > 0 and player2.chips > 0:
         wait()
 
         print('Cards:', *player2.hand)
-        print('Chips:', player2.chips, '\n')
+        print('Chips:', player2.chips)
+        print('Bet:', player2.betting, '\n')
 
         print('Pot:', pot, '\n')
 
         print(player1.name, 'chips:', player1.chips)
-        print(player2.name, 'bet:', player2.betting, '\n')
+        print(player1.name, 'bet:', player1.betting, '\n')
 
-        print(player1.betting - player2.betting, 'to call')
+        to_call = player1.betting - player2.betting
+        print(to_call, 'to call')
         try: 
             bet_in = input('Bet: ')
-            player2.bet(int(bet_in))
+            player2.bet(int(bet_in), to_call)
         except ValueError:
             if bet_in == 'f':
                 player2.fold()
                 break
-        
+            if to_call > 0:
+                player2.bet(to_call, 0)
+
         if player1.betting == player2.betting:
             break
     sleep(2)
@@ -305,13 +315,14 @@ while player1.chips > 0 and player2.chips > 0:
     player2.last = player2.betting
         
     # flop betting
-    while not player1.folded and not player2.folded:
+    while not player1.folded and not player2.folded and player1.chips > 0 and player2.chips > 0:
         clear()
         print(player1.name, 'only!')
         wait()
 
         print('Cards:', *player1.hand)
-        print('Chips:', player1.chips, '\n')
+        print('Chips:', player1.chips)
+        print('Bet:', player1.betting, '\n')
 
         print('Pot:', pot)
         print('Community:', *community, '\n')
@@ -319,14 +330,17 @@ while player1.chips > 0 and player2.chips > 0:
         print(player2.name, 'chips:', player2.chips)
         print(player2.name, 'bet:', player2.betting, '\n')
 
-        print(player2.betting - player1.betting, 'to call')
+        to_call = player2.betting - player1.betting
+        print(to_call, 'to call')
         try: 
             bet_in = input('Bet: ')
-            player1.bet(int(bet_in))
+            player1.bet(int(bet_in), to_call)
         except ValueError: 
             if bet_in == 'f':
                 player1.fold()
                 break
+            if to_call > 0:
+                player1.bet(to_call, 0)
 
         if player1.betting == player2.betting and player2.betting != player2.last: 
             break
@@ -336,22 +350,26 @@ while player1.chips > 0 and player2.chips > 0:
         wait()
         
         print('Cards:', *player2.hand)
-        print('Chips:', player2.chips, '\n')
+        print('Chips:', player2.chips)
+        print('Bet:', player2.betting, '\n')
 
         print('Pot:', pot)
         print('Community:', *community, '\n')
 
         print(player1.name, 'chips:', player1.chips)
-        print(player2.name, 'bet:', player2.betting, '\n')
+        print(player1.name, 'bet:', player1.betting, '\n')
 
-        print(player1.betting - player2.betting, 'to call')
+        to_call = player1.betting - player2.betting
+        print(to_call, 'to call')
         try: 
             bet_in = input('Bet: ')
-            player2.bet(int(bet_in))
+            player2.bet(int(bet_in), to_call)
         except ValueError:
             if bet_in == 'f':
                 player2.fold()
                 break
+            if to_call > 0:
+                player2.bet(to_call, 0)
         
         if player1.betting == player2.betting:
             break
@@ -371,13 +389,14 @@ while player1.chips > 0 and player2.chips > 0:
     player2.last = player2.betting
         
     # turn betting
-    while not player1.folded and not player2.folded:
+    while not player1.folded and not player2.folded and player1.chips > 0 and player2.chips > 0:
         clear()
         print(player1.name, 'only!')
         wait()
 
         print('Cards:', *player1.hand)
-        print('Chips:', player1.chips, '\n')
+        print('Chips:', player1.chips)
+        print('Bet:', player1.betting, '\n')
 
         print('Pot:', pot)
         print('Community:', *community, '\n')
@@ -385,14 +404,17 @@ while player1.chips > 0 and player2.chips > 0:
         print(player2.name, 'chips:', player2.chips)
         print(player2.name, 'bet:', player2.betting, '\n')
 
-        print(player2.betting - player1.betting, 'to call')
+        to_call = player2.betting - player1.betting
+        print(to_call, 'to call')
         try: 
             bet_in = input('Bet: ')
-            player1.bet(int(bet_in))
+            player1.bet(int(bet_in), to_call)
         except ValueError: 
             if bet_in == 'f':
                 player1.fold()
                 break
+            if to_call > 0:
+                player1.bet(to_call, 0)
 
         if player1.betting == player2.betting and player2.betting != player2.last: 
             break
@@ -402,22 +424,26 @@ while player1.chips > 0 and player2.chips > 0:
         wait()
 
         print('Cards:', *player2.hand)
-        print('Chips:', player2.chips, '\n')
+        print('Chips:', player2.chips)
+        print('Bet:', player2.betting, '\n')
 
         print('Pot:', pot)
         print('Community:', *community, '\n')
 
         print(player1.name, 'chips:', player1.chips)
-        print(player2.name, 'bet:', player2.betting, '\n')
+        print(player1.name, 'bet:', player1.betting, '\n')
 
-        print(player1.betting - player2.betting, 'to call')
+        to_call = player1.betting - player2.betting
+        print(to_call, 'to call')
         try: 
             bet_in = input('Bet: ')
-            player2.bet(int(bet_in))
+            player2.bet(int(bet_in), to_call)
         except ValueError:
             if bet_in == 'f':
                 player2.fold()
                 break
+            if to_call > 0:
+                player2.bet(to_call, 0)
         
         if player1.betting == player2.betting:
             break
@@ -438,13 +464,14 @@ while player1.chips > 0 and player2.chips > 0:
 
         
     # river betting
-    while not player1.folded and not player2.folded:
+    while not player1.folded and not player2.folded and player1.chips > 0 and player2.chips > 0:
         clear()
         print(player1.name, 'only!')
         wait()
 
         print('Cards:', *player1.hand)
-        print('Chips:', player1.chips, '\n')
+        print('Chips:', player1.chips)
+        print('Bet:', player1.betting, '\n')
 
         print('Pot:', pot)
         print('Community:', *community, '\n')
@@ -452,16 +479,19 @@ while player1.chips > 0 and player2.chips > 0:
         print(player2.name, 'chips:', player2.chips)
         print(player2.name, 'bet:', player2.betting, '\n')
 
-        print(player2.betting - player1.betting, 'to call')
+        to_call = player2.betting - player1.betting
+        print(to_call, 'to call')
         try: 
             bet_in = input('Bet: ')
-            player1.bet(int(bet_in))
+            player1.bet(int(bet_in), to_call)
         except ValueError: 
             if bet_in == 'f':
                 player1.fold()
                 break
+            if to_call > 0:
+                player1.bet(to_call, 0)
 
-        if player1.betting == player2.betting and player2.betting != player2.betting: 
+        if player1.betting == player2.betting and player2.betting != player2.last: 
             break
         
         clear()
@@ -469,22 +499,26 @@ while player1.chips > 0 and player2.chips > 0:
         wait()
 
         print('Cards:', *player2.hand)
-        print('Chips:', player2.chips, '\n')
+        print('Chips:', player2.chips)
+        print('Bet:', player2.betting, '\n')
 
         print('Pot:', pot)
         print('Community:', *community, '\n')
 
         print(player1.name, 'chips:', player1.chips)
-        print(player2.name, 'bet:', player2.betting, '\n')
+        print(player1.name, 'bet:', player1.betting, '\n')
 
-        print(player1.betting - player2.betting, 'to call')
+        to_call = player1.betting - player2.betting
+        print(to_call, 'to call')
         try: 
             bet_in = input('Bet: ')
-            player2.bet(int(bet_in))
+            player2.bet(int(bet_in), to_call)
         except ValueError:
             if bet_in == 'f':
                 player2.fold()
                 break
+            if to_call > 0:
+                player2.bet(to_call, 0)
         
         if player1.betting == player2.betting:
             break
@@ -509,14 +543,33 @@ while player1.chips > 0 and player2.chips > 0:
         print(player1.name, 'wins!')
         print('They had:', *player1.called)
         print(player2.name, 'had', *player2.called)
+        player1.chips += pot
     elif player2.score > player1.score or player1.folded:
         print(player2.name, 'wins!')
         print('The had:', *player2.called)
         print(player1.name, 'had', *player2.called)
+        player2.chips += pot
     else:
-        print('Tie! We\'ll get to it')
-
-    print(player1.score, player2.score)
-
-    print('Success!!!')
-    break
+        if player1.score == 7:
+            player1.best = [card_ranks[n] for n in sorted(set([i[0] for i in player1.called]), key=lambda x: player1.called.count(x), reverse=True)]
+            player2.best = [card_ranks[n] for n in sorted(set([i[0] for i in player2.called]), key=lambda x: player2.called.count(x), reverse=True)]
+        
+        for p1, p2 in zip(player1.best, player2.best):
+            if p1 > p2:
+                print(player1.name, 'wins!')
+                print('They had:', *player1.called)
+                print(player2.name, 'had', *player2.called)
+                player1.chips += pot
+                break
+            elif p2 > p1:
+                print(player2.name, 'wins!')
+                print('They had:', *player2.called)
+                print(player1.name, 'had', *player1.called)
+                player2.chips += pot
+                break
+        else:
+            print('You tie! Split the pot!!!')
+            player1.chips += pot//2
+            player2.chips += pot//2
+        
+    wait()
