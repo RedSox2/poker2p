@@ -20,6 +20,18 @@ deck = [
     '2♤', '2♡', '2♢', '2♧'
 ]
 
+score_key = {
+    1: 'a high card',
+    2: 'one pair', 
+    3: 'two pair', 
+    4: 'three of a kind', 
+    5: 'a straight', 
+    6: 'a flush', 
+    7: 'a full house', 
+    8: 'four of a kind', 
+    9: 'a straight flush'
+} 
+        
 random.shuffle(deck)
 random.shuffle(deck)
 random.shuffle(deck)
@@ -113,6 +125,7 @@ def clear() -> None:
 def wait():
     """ wait for enter """
     input('Press ENTER to continue . . .')
+    clear()
 
 pot = None
 class Player:
@@ -133,7 +146,8 @@ class Player:
         self.hand.clear()
         self.score = 0
         self.betting = 0
-        self.called.clear()
+        self.last = 0
+        self.called = ['fold']
         self.best.clear()
 
     def ante(self):
@@ -153,10 +167,9 @@ class Player:
         self.betting += bet
         pot += bet
 
-    def deal(self, cards):
+    def deal(self, card):
         """ deals a card to the hand """
-        for card in cards:
-            self.hand.append(card)
+        self.hand.append(card)
 
     def fold(self):
         """ fold the hand """
@@ -202,21 +215,10 @@ class Player:
         else:
             self.score = 1
 
-        score_key = {
-            1: 'a high card',
-            2: 'one pair', 
-            3: 'two pair', 
-            4: 'three of a kind', 
-            5: 'a straight', 
-            6: 'a flush', 
-            7: 'a full house', 
-            8: 'four of a kind', 
-            9: 'a straight flush'
-        } 
-        
         print('You have', score_key[self.score])
 
 
+clear()
 player1 = Player(input('Player 1: '))
 player2 = Player(input('Player 2: '))
 
@@ -241,7 +243,6 @@ while player1.chips > 0 and player2.chips > 0:
 
     player1.deal(deck.pop())
     player2.deal(deck.pop())
-
     # pre-flop betting
     while not player1.folded and not player2.folded and player1.chips > 0 and player2.chips > 0:
         clear()
@@ -542,12 +543,16 @@ while player1.chips > 0 and player2.chips > 0:
     if player1.score > player2.score or player2.folded:
         print(player1.name, 'wins!')
         print('They had:', *player1.called)
+        print('Called as:', score_key[player1.score])
         print(player2.name, 'had', *player2.called)
+        print('Called as:', score_key[player2.score])
         player1.chips += pot
     elif player2.score > player1.score or player1.folded:
         print(player2.name, 'wins!')
-        print('The had:', *player2.called)
-        print(player1.name, 'had', *player2.called)
+        print('They had:', *player2.called)
+        print('Called as:', score_key[player2.score])
+        print(player1.name, 'had', *player1.called)
+        print('Called as:', score_key[player1.score])
         player2.chips += pot
     else:
         if player1.score == 7:
@@ -558,13 +563,17 @@ while player1.chips > 0 and player2.chips > 0:
             if p1 > p2:
                 print(player1.name, 'wins!')
                 print('They had:', *player1.called)
+                print('Called as:', score_key[player1.score])
                 print(player2.name, 'had', *player2.called)
+                print('Called as:', score_key[player2.score])
                 player1.chips += pot
                 break
             elif p2 > p1:
                 print(player2.name, 'wins!')
                 print('They had:', *player2.called)
+                print('Called as:', score_key[player2.score])
                 print(player1.name, 'had', *player1.called)
+                print('Called as:', score_key[player1.score])
                 player2.chips += pot
                 break
         else:
@@ -573,3 +582,8 @@ while player1.chips > 0 and player2.chips > 0:
             player2.chips += pot//2
         
     wait()
+
+if player1.chips <= 0:
+    print('Player 2 wins the game!!!')
+else:
+    print('Player 1 wins the game!!!')
