@@ -21,6 +21,7 @@ deck = [
 ]
 
 score_key = {
+    0: 'nothing',
     1: 'a high card',
     2: 'one pair', 
     3: 'two pair', 
@@ -584,6 +585,6 @@ while player1.chips > 0 and player2.chips > 0:
     wait()
 
 if player1.chips <= 0:
-    print('Player 2 wins the game!!!')
+    print(player2.name, 'wins the game!!!')
 else:
-    print('Player 1 wins the game!!!')
+    print(player1.name, 'wins the game!!!')
